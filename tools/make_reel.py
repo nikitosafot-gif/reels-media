@@ -96,7 +96,11 @@ class VideoBG:
         self.vig = vig.clip(0.25, 1)[..., None]
     def __call__(self, t, rng):
         raw = self.p.stdout.read(W * H * 3)
-        a = np.frombuffer(raw, np.uint8).reshape(H, W, 3).astype(np.float32)
+        img = Image.frombuffer("RGB", (W, H), raw)
+        z = 1.0 + 0.07 * min(1.0, t / 8.0)  # плавный зум до +7%
+        cw, ch = W / z, H / z
+        img = img.resize((W, H), Image.BICUBIC, box=((W - cw) / 2, (H - ch) / 2, (W + cw) / 2, (H + ch) / 2))
+        a = np.asarray(img, np.float32)
         a = a * self.vig * self.dark
         a += rng.normal(0, 5, (H // 2, W // 2, 1)).repeat(2, 0).repeat(2, 1)
         return Image.fromarray(a.clip(0, 255).astype(np.uint8))
@@ -181,7 +185,7 @@ def render(style, out, blocks, accents, sub, dur=8.0, seed=1, audio=True, bgvide
             y = top; prev_b = 0
             for li, (bi, ln) in enumerate(layout):
                 if bi != prev_b: y += 26; prev_b = bi
-                start = 0.25 + bi * 1.1 + li * 0.12
+                start = -1.0 if bi == 0 else (0.35 + (bi - 1) * 0.5 + li * 0.08)
                 p = ease((t - start) / 0.45)
                 if p > 0:
                     lw = d.textlength(ln, font=fnt)
@@ -210,7 +214,7 @@ def render(style, out, blocks, accents, sub, dur=8.0, seed=1, audio=True, bgvide
 
         # подпись внизу («читай описание»)
         if sub:
-            st = (dur * 0.6) if style == "notes" else (0.25 + len(blocks) * 1.1 + 0.3)
+            st = (dur * 0.6) if style == "notes" else (0.35 + (len(blocks) - 1) * 0.5 + 0.2)
             p = ease((t - st) / 0.5)
             if p > 0:
                 bob = math.sin(t * 5) * 8
