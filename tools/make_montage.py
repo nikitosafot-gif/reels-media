@@ -62,7 +62,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("out"); ap.add_argument("text"); ap.add_argument("clips", nargs="+")
     ap.add_argument("--seg", type=float, default=1.2)
-    ap.add_argument("--dark", type=float, default=0.85)
+    ap.add_argument("--dark", type=float, default=0.6)
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--size", type=int, default=44)
     ap.add_argument("--sub", default="Читай описание ↓")
@@ -75,7 +75,8 @@ def main():
         st = rnd.uniform(0.3, max(0.3, d - a.seg - 0.3))
         p = os.path.join(tmp, f"p{i:02d}.mp4")
         vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS},"
-              f"eq=brightness={-(1 - a.dark) * 0.35:.3f}:saturation=1.05:contrast=1.05,format=yuv420p")
+              f"eq=saturation=1.05:contrast=1.05,colorchannelmixer=rr={a.dark}:gg={a.dark}:bb={a.dark},"
+              f"vignette=angle=PI/4.5,format=yuv420p")
         subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-ss", f"{st:.2f}", "-i", c, "-t", f"{a.seg}",
                         "-an", "-vf", vf, "-c:v", "libx264", "-crf", "18", "-preset", "fast", p], check=True)
         parts.append(p)
